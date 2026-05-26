@@ -1,60 +1,42 @@
 import csv
+import os
+import numpy as np
+from src.preprocess import load_titanic_data, normalize
 
-# Тобі потрібно буде імпортувати функцію передбачення, яку написав твій друг
-# Наприклад, якщо вона в файлі src/model.py і називається predict:
-# from src.model import predict
 
-def generate_submission(test_filepath, output_filepath):
+def generate_submission(model, test_filepath, output_filepath):
     """
-    Зчитує тестові дані, робить передбачення та зберігає їх у форматі для Kaggle.
+    Зчитує тестові дані, обробляє їх, робить реальне передбачення навченою моделлю
+    і зберігає у форматі для Kaggle.
     """
-    predictions = []
-
-    # 1. Зчитуємо дані з test.csv
-    try:
-        with open(test_filepath, mode='r', encoding='utf-8') as infile:
-            reader = csv.DictReader(infile)
-            
-            for row in reader:
-                passenger_id = row['PassengerId']
-                
-                # ТУТ МАЄ БУТИ ПІДГОТОВКА ФІЧ (ОЗНАК) ДЛЯ МОДЕЛІ
-                # Тобі треба витягнути дані з row так само, як це робилося для тренувальних даних.
-                # Наприклад (це лише приклад, запитай друга, які саме фічі він використовує):
-                # pclass = int(row['Pclass'])
-                # sex = 1 if row['Sex'] == 'female' else 0
-                # features = [pclass, sex]
-                
-                # 2. Робимо передбачення
-                # prediction = predict(features)
-                
-                # ТИМЧАСОВА ЗАГЛУШКА: поки ти не підключиш реальну модель, 
-                # ставимо 0 (ніби ніхто не вижив), щоб перевірити генерацію файлу.
-                prediction = 0 
-                
-                # Додаємо результат у список
-                predictions.append({
-                    'PassengerId': passenger_id,
-                    'Survived': prediction
-                })
-    except FileNotFoundError:
+    # 1. Завантажуємо та обробляємо тестові дані (використовуємо наш preprocess)
+    if not os.path.exists(test_filepath):
         print(f"Помилка: Файл {test_filepath} не знайдено.")
         return
 
-    # 3. Записуємо результати у submission.csv
+    # Завантажуємо фічі. y_test буде пустим масивом, бо в test.csv немає колонки Survived
+    X_test_raw, _ = load_titanic_data(test_filepath)
+    X_test = normalize(X_test_raw)
+
+    # 2. Робимо реальний прогноз моделлю
+    predictions = model.predict(X_test)
+
+    # 3. Зчитуємо PassengerId з оригінального файлу, щоб зберегти структуру
+    submission_data = []
+    with open(test_filepath, mode='r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader):
+            submission_data.append({
+                'PassengerId': row['PassengerId'],
+                'Survived': int(predictions[i])
+            })
+
+    # 4. Записуємо результати у файл submission.csv
     with open(output_filepath, mode='w', newline='', encoding='utf-8') as outfile:
         fieldnames = ['PassengerId', 'Survived']
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-        
-        writer.writeheader()
-        writer.writerows(predictions)
-        
-    print(f"Файл {output_filepath} успішно згенеровано! Кількість записів: {len(predictions)}")
 
-if __name__ == "__main__":
-    # Вкажи правильні шляхи до файлів залежно від структури вашого проєкту
-    # Зазвичай тестовий файл лежить у папці data/
-    TEST_FILE = 'data/test.csv'
-    SUBMISSION_FILE = 'submission.csv'
-    
-    generate_submission(TEST_FILE, SUBMISSION_FILE)
+        writer.writeheader()
+        writer.writerows(submission_data)
+
+    print(f"Файл {output_filepath} успішно згенеровано! Кількість записів: {len(submission_data)}")

@@ -3,32 +3,42 @@ import numpy as np
 
 from src.preprocess import load_titanic_data, normalize
 from src.model import LogisticRegression
+from src.metrics import calculate_metrics
+from src.predict_test import generate_submission
 
-# from src.metrics import calculate_metrics
 
 def main():
-    # шляхи до файлів
     base_path = os.path.dirname(__file__)
-    path = os.path.join(base_path, 'data', 'train.csv')
-    
-    # підготовка даних
-    X_raw, y = load_titanic_data(path)
+    train_path = os.path.join(base_path, 'data', 'train.csv')
+    test_path = os.path.join(base_path, 'data', 'test.csv')
+    submission_path = os.path.join(base_path, 'submission.csv')
+
+    # 1. Підготовка тренувальних даних
+    print("Завантаження даних...")
+    X_raw, y = load_titanic_data(train_path)
     X = normalize(X_raw)
-    
-    # тренування моделі
+
+    # 2. Тренування моделі
     model = LogisticRegression(learning_rate=0.1, iterations=5000)
     print("Починаємо навчання моделі...")
     model.fit(X, y)
-    
-    # результати
+
+    # 3. Результати на тренувальних даних
     predictions = model.predict(X)
-    accuracy = np.mean(predictions == y) * 100
-    
-    print(f"Готово! Точність на тренувальних даних: {accuracy:.2f}%")
-    
-    # кастомні метрики (поки вимкнено)
-    # acc, prec, rec = calculate_metrics(y.tolist(), predictions.tolist())
-    # print(f"Precision: {prec:.4f} | Recall: {rec:.4f}")
+
+    # 4. Розрахунок кастомних метрик
+    acc, prec, rec = calculate_metrics(y, predictions)
+
+    print("\n=== ФІНАЛЬНІ РЕЗУЛЬТАТИ МОДЕЛІ ===")
+    print(f"Accuracy  (Точність) : {acc * 100:.2f}%")
+    print(f"Precision (Влучність): {prec * 100:.2f}%")
+    print(f"Recall    (Повнота)  : {rec * 100:.2f}%")
+    print("==================================\n")
+
+    # 5. Генерація прогнозу для тестових даних (Kaggle Submission)
+    print("Генерація файлу передбачень для тестів...")
+    generate_submission(model, test_path, submission_path)
+
 
 if __name__ == "__main__":
     main()
