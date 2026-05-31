@@ -19,7 +19,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s]: %(message)s',
     handlers=[
         logging.FileHandler(log_file_path, encoding='utf-8'),
-        logging.StreamHandler()  # Дублювати логи в консоль PyCharm
+        logging.StreamHandler()
     ]
 )
 logging.info("Сервер запускається. Налаштування логування успішне.")
@@ -81,7 +81,6 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-
         pclass = int(request.form['pclass'])
         sex = int(request.form['sex'])
         age = float(request.form['age'])
@@ -113,7 +112,6 @@ def predict():
         conn.close()
 
         logging.info(f"Прогноз успішно збережено в БД. Результат={prediction}, Ймовірність={probability:.2f}%")
-
         result_text = "Вижив(ла) 🎉" if prediction == 1 else "Загинув(ла) 💀"
         return render_template('index.html',
                                prediction_text=f"Вердикт: {result_text}",
