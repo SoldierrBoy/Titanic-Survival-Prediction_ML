@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000" # або 8000, залежно від твого застосунку
+    volumes:
+      - .:/app
