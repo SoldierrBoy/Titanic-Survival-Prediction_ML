@@ -6,7 +6,7 @@ import joblib
 import numpy as np
 from flask import Flask, request, render_template
 import pandas as pd
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # ==========================================
 # 1. НАЛАШТУВАННЯ ЛОГУВАННЯ (LOGGING)
@@ -19,7 +19,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s]: %(message)s',
     handlers=[
         logging.FileHandler(log_file_path, encoding='utf-8'),
-        logging.StreamHandler()  # Дублювати логи в консоль PyCharm
+        logging.StreamHandler()
     ]
 )
 logging.info("Сервер запускається. Налаштування логування успішне.")
@@ -75,13 +75,29 @@ init_db()
 @app.route('/')
 def home():
     logging.info("Користувач зайшов на головну сторінку.")
-    return render_template('index.html')
+
+    # ДІСТАЄМО З БАЗИ 5 ОСТАННІХ ЗАПИСІВ
+    history = []
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT pclass, sex, age, fare, prediction_result, probability 
+            FROM predictions 
+            ORDER BY id DESC LIMIT 5
+        ''')
+        history = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        logging.error(f"Помилка читання історії з БД: {str(e)}")
+
+    # Передаємо історію у фронтенд
+    return render_template('index.html', history=history)
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-
         pclass = int(request.form['pclass'])
         sex = int(request.form['sex'])
         age = float(request.form['age'])
@@ -89,20 +105,24 @@ def predict():
 
         logging.info(f"Отримано запит на прогноз: Pclass={pclass}, Sex={sex}, Age={age}, Fare={fare}")
 
+        # Визначення титулу
+        if sex == 1:
+            title = 3
+        else:
+            title = 4 if age < 18 else 1
+
         family_size = 1
         is_alone = 1
 
         features = pd.DataFrame([{
-            'Pclass': pclass,
-            'Sex': sex,
-            'Age': age,
-            'Fare': fare,
-            'FamilySize': family_size,
-            'IsAlone': is_alone
+            'Pclass': pclass, 'Sex': sex, 'Age': age, 'Fare': fare,
+            'FamilySize': family_size, 'IsAlone': is_alone, 'Title': title
         }])
 
         prediction = int(model.predict(features)[0])
         probability = float(model.predict_proba(features)[0][1] * 100)
+
+        # Збереження в БД
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
@@ -110,6 +130,14 @@ def predict():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (pclass, sex, age, fare, prediction, probability, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
+
+        # ОДРАЗУ ОНОВЛЮЄМО ІСТОРІЮ ДЛЯ СТОРІНКИ ВІДПОВІДІ
+        cursor.execute('''
+            SELECT pclass, sex, age, fare, prediction_result, probability 
+            FROM predictions 
+            ORDER BY id DESC LIMIT 5
+        ''')
+        history = cursor.fetchall()
         conn.close()
 
         logging.info(f"Прогноз успішно збережено в БД. Результат={prediction}, Ймовірність={probability:.2f}%")
@@ -118,15 +146,12 @@ def predict():
         return render_template('index.html',
                                prediction_text=f"Вердикт: {result_text}",
                                probability_text=f"Ймовірність виживання: {probability:.2f}%",
-                               pclass=pclass,
-                               sex=sex,
-                               age=age,
-                               fare=fare)
+                               pclass=pclass, sex=sex, age=age, fare=fare,
+                               history=history)  # Передаємо оновлену історію
 
     except Exception as e:
         logging.error(f"Помилка під час обробки прогнозу: {str(e)}")
         return f"Помилка сервера: {str(e)}"
-
 
 if __name__ == "__main__":
     app.run(debug=True)
