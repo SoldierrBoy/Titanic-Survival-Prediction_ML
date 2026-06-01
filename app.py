@@ -141,7 +141,6 @@ def predict():
         conn.close()
 
         logging.info(f"Прогноз успішно збережено в БД. Результат={prediction}, Ймовірність={probability:.2f}%")
-
         result_text = "Вижив(ла) 🎉" if prediction == 1 else "Загинув(ла) 💀"
         return render_template('index.html',
                                prediction_text=f"Вердикт: {result_text}",
