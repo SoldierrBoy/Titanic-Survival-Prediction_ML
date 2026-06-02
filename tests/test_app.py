@@ -26,17 +26,22 @@ class TitanicAppTestCase(unittest.TestCase):
         """Тест: Перевірка працездатності самої ML-моделі."""
         model = joblib.load(self.model_path)
         test_features = pd.DataFrame([{
-            'Pclass': 1, 'Sex': 1, 'Age': 22.0, 'Fare': 50.0, 'FamilySize': 1, 'IsAlone': 1
+            'Pclass': 1,
+            'Sex': 1,
+            'Age': 22.0,
+            'Fare': 50.0,
+            'FamilySize': 1,
+            'IsAlone': 1,
+            'Title': 1
         }])
 
         prediction = model.predict(test_features)[0]
-        self.assertIn(prediction, [0, 1], "Модель повернула некоректне значення класу!")
+        self.assertIn(prediction, [0, 1])
 
     def test_home_page(self):
         """Тест: Перевірка, що головна сторінка сайту відкривається успішно (Status 200)."""
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        # Перевіряємо наявність реального тексту форми (в UTF-8 кодуванні)
         self.assertIn('Прогноз'.encode('utf-8'), response.data)
 
     def test_prediction_endpoint(self):

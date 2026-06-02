@@ -17,42 +17,27 @@ def generate_submission(model_path, test_filepath, output_filepath):
         print(f"Помилка: Модель {model_path} не знайдено. Спочатку навчіть її!")
         return
 
-    # Завантажуємо тестові дані через pandas для Feature Engineering
     df_test = pd.read_csv(test_filepath)
-
-    # Створюємо копію для обробки пропусків та ознак
     df = df_test.copy()
     df['Age'] = df['Age'].fillna(df['Age'].mean())
     df['Fare'] = df['Fare'].fillna(df['Fare'].mean())
     df['Sex'] = df['Sex'].map({'female': 1, 'male': 0})
-
-    # Feature Engineering (родина)
     df['FamilySize'] = df['SibSp'] + df['Parch'] + 1
     df['IsAlone'] = 0
     df.loc[df['FamilySize'] == 1, 'IsAlone'] = 1
-
-    # Advanced Feature Engineering (титули)
     df['Title'] = df['Name'].str.extract(r' ([A-Za-z]+)\.', expand=False)
     df['Title'] = df['Title'].replace(
         ['Lady', 'Countess', 'Capt', 'Col', 'Don', 'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Dona'], 'Rare')
     df['Title'] = df['Title'].replace('Mlle', 'Miss')
     df['Title'] = df['Title'].replace('Ms', 'Miss')
     df['Title'] = df['Title'].replace('Mme', 'Mrs')
-
     title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
     df['Title'] = df['Title'].map(title_mapping).fillna(0)
 
-    # Вибираємо наші 7 ознак
     features = ['Pclass', 'Sex', 'Age', 'Fare', 'FamilySize', 'IsAlone', 'Title']
     X_test = df[features]
-
-    # Завантажуємо нашу найкращу навчену модель Random Forest
     model = joblib.load(model_path)
-
-    # Робимо передбачення
     predictions = model.predict(X_test)
-
-    # Формуємо сабмішн
     submission_data = []
     for i, row in df_test.iterrows():
         submission_data.append({

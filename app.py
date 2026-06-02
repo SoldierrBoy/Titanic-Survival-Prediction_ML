@@ -76,7 +76,6 @@ init_db()
 def home():
     logging.info("Користувач зайшов на головну сторінку.")
 
-    # ДІСТАЄМО З БАЗИ 5 ОСТАННІХ ЗАПИСІВ
     history = []
     try:
         conn = sqlite3.connect(db_path)
@@ -91,7 +90,6 @@ def home():
     except Exception as e:
         logging.error(f"Помилка читання історії з БД: {str(e)}")
 
-    # Передаємо історію у фронтенд
     return render_template('index.html', history=history)
 
 
@@ -104,8 +102,6 @@ def predict():
         fare = float(request.form['fare'])
 
         logging.info(f"Отримано запит на прогноз: Pclass={pclass}, Sex={sex}, Age={age}, Fare={fare}")
-
-        # Визначення титулу
         if sex == 1:
             title = 3
         else:
@@ -121,8 +117,6 @@ def predict():
 
         prediction = int(model.predict(features)[0])
         probability = float(model.predict_proba(features)[0][1] * 100)
-
-        # Збереження в БД
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
@@ -130,8 +124,6 @@ def predict():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (pclass, sex, age, fare, prediction, probability, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
-
-        # ОДРАЗУ ОНОВЛЮЄМО ІСТОРІЮ ДЛЯ СТОРІНКИ ВІДПОВІДІ
         cursor.execute('''
             SELECT pclass, sex, age, fare, prediction_result, probability 
             FROM predictions 

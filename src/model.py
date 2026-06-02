@@ -70,29 +70,24 @@ def train_and_save_model():
     # СТВОРЕННЯ ГРАФІКА ВАЖЛИВОСТІ ОЗНАК
     try:
         import matplotlib
-        matplotlib.use('Agg')  # Режим без відображення вікон (для фонового збереження)
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-
-        # Створюємо папку static у корені проєкту, якщо її немає
         static_dir = os.path.join(base_path, 'static')
         os.makedirs(static_dir, exist_ok=True)
 
         plt.figure(figsize=(8, 5))
-        # Сортуємо для красивого відображення
         feat_importances = pd.Series(importances, index=features).sort_values(ascending=True)
         feat_importances.plot(kind='barh', color='#2a5298')
         plt.title('Важливість ознак у моделі Random Forest (%)', fontsize=12, fontweight='bold', pad=15)
         plt.xlabel('Вплив на прогноз', fontsize=10)
         plt.tight_layout()
 
-        # Зберігаємо графік у папку static
         plt.savefig(os.path.join(static_dir, 'importance.png'), dpi=150)
         plt.close()
         print("Графік важливості ознак успішно збережено у static/importance.png")
     except Exception as e:
         print(f"Помилка генерації графіка: {e}")
 
-    # Зберігаємо саму модель
     model_path = os.path.join(base_path, 'src', 'titanic_model.pkl')
     joblib.dump(best_model, model_path)
     print(f"Оптимальну модель успішно збережено у файл: {model_path}")
